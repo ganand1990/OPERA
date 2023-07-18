@@ -222,7 +222,7 @@ def group_determination(pref_pair_req,pairs):
                     group1_tmp.append(item)
                     count_like+=1
                 elif(count_like%2 == 0):
-                    group2_temp.append(item)
+                    group2_tmp.append(item)
                     count_like+=1
     
     #print ('group1_tmp, group2_tmp={}{}'.format(group1_tmp,group2_tmp))
