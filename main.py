@@ -7,16 +7,17 @@ import random_gen
 import max_swap
 import os,glob
 import time
+import bib
 def calculation_mode():
-    cal_mode = 1 #calculation mode; 0 for random structure gen and 1 for reading the random file and generating SRO confs
+    cal_mode = 1#calculation mode; 0 for random structure gen and 1 for reading the random file and generating SRO confs
     return cal_mode
 def input_data():
-    elements = ['Sc','Ti','Zr','Hf'] #this order is dependent upon the ordering the potential file
-    ele_rad = [1.62,1.47,1.60,1.59]
+    #elements = ['Sc','Ti','Zr','Hf'] #this order is dependent upon the ordering the potential file
+    #ele_rad = [1.62,1.47,1.60,1.59]
     #elements = ['Mo','Nb','Ta','W']
     #ele_rad = [1.39,1.46,1.46,1.39]
-    #elements = ['Co','Cr','Ni']
-    #ele_rad = [1.246,1.280,1.241]
+    elements = ['Co','Cr','Fe','Mn','Ni']#,'Ni'] #Cr removed
+    ele_rad = [1.25,1.28,1.26,1.27,1.24]#,1.24] #Cr:1.28 Ang
     anion = ['O'] #add any anion (not same as in element list) as proxy here.
     an_rad = 0. #Anion radius; Set it zero for non-ionic structure. 
     crystal='fcc'
@@ -27,7 +28,7 @@ def input_data():
     inp_file='inp.cfg' #input file for random structure generation
     random_file = '0.0_random.xyz'
     proxy_ele='Ca'
-    pref_pair_req=['Sc','Ti'] #it can be in the arbitrary order
+    pref_pair_req=['Ni','Mn'] #it can be in the arbitrary order
     num_delta=5 #number of delta para from 0 to max delta possible
     #cal_mode=1 #calculation mode; 0 for random structure gen and 1 for reading the random file and generating SRO confs
     return elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum
@@ -40,7 +41,7 @@ def make_data(calc_mode):
     #for item in latpara_list:
     #    latparam = latparam + item
     #latparam = latparam/(len(latpara_list))
-    print (lat_param)
+    #print (lat_param)
     if ( calc_mode == 0 ):    
         at = read('{}'.format(inp_file))
     elif ( calc_mode == 1 ):
@@ -114,8 +115,20 @@ def make_data(calc_mode):
         atoms.set_pbc(111)
     elif ( calc_mode == 1 ): 
         atoms = at
+        num_elements = len(set(atoms.get_chemical_symbols())) 
+        '''
+        implementing a condition that if the random structure file
+        for different number of elements is being read
+        '''
+        if (num_elements != len(elements)):
+            print ('num_elements,len(elements)={},{}'.format(num_elements,len(elements)))
+            raise Exception ('Random structure file has diffent no. of elements wrt element list of the present calculation')
+        else:
+            pass
     else:
         raise Exception('Unindentified calc_mode value')
+    
+    
     #cutoff=cutoff_det(latparam,crystal,fluc)
     i,j = neighbor_list('ij',atoms,cutoff)
     #modify i and j to include only metals and remove anions
@@ -209,10 +222,6 @@ def bond_count_trend(pref_pair_req,pairs,elements,num_each,nn_dict,count_bond,nu
             pass
         at_ear=atoms
         at=atoms_gen(item,at_ear,swap_dict)
-    #        at_ear=at
-    #    else:
-    #        at=atoms_gen(item,at_ear,swap_dict)
-    #        at_ear=at
         count_bonds_re=sro_count_bond(at,cutoff,pairs)
         if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or \
                 (count_bonds_re[indx_red2] > count_bond[indx_red2]) or \
@@ -235,50 +244,15 @@ def main():
         #elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,cal_mode,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data()
         count_bonds,atom_left,delta,ideal_num=random_gen.random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion)
         print ('pairs,count_bonds,delta={},{},{}'.format(pairs,count_bonds,delta))
-            #random_reach_count=0
-            #for num,item in enumerate(pairs):
-            #    if (item.split('-')[0] == item.split('-')[1] and count_bonds[num] == ideal_num):
-            #        random_reach_count+=1
-            #    elif (item.split('-')[0] != item.split('-')[1] and count_bonds[num] == 2*ideal_num):
-            #        random_reach_count+=1
-            #    else:
-            #        pass
-            #if (random_reach_count == len(pairs)):
-            #    random_reach=True
-            #else:
-            #    random_reach=False
         end=time.time()
         print ('time-taken={}'.format(end-start))
+        #printing citation information
+        bib.citation()
     elif ( cal_mode == 1):
         elements,num_each,atoms,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data(cal_mode)
         
-        #reading the atoms object with zero delta paramter
-        #atoms=read('0.0_random.xyz')
-        #elem_list_all=atoms.get_chemical_symbols()
-        #num_metal = sum(a for a in num_each)
-        #TEST to ensure that metals are before anion in the elem_list_all
-        #generation of elem_list
-        #for a,b in enumerate(elem_list_all):
-        #    print (a,b)
-        #    if ( a < num_metal ):
-        #        elem_list.append(b)
-        #    else:
-        #        pass
         
-        #removing the anions from the elem_list
-        #determination of nn and nn_dict,bond count 
-        #i,j=neighbor_list('ij',atoms,cutoff)
-        #i_mod and j_mod need to be calculated, which would contain only metal not anions
-        #i_mod = []
-        #j_mod = []
-        #for a,b in zip(i,j):
-        #    if ( a <  num_metal and b < num_metal ):
-        #        i_mod.append(a)
-        #        j_mod.append(b)
-
         total_num_bonds=len(i) #total number of bonds
-        #print (num_metal,len(elem_list),total_num_bonds)
-        
         nn_dict=func_all.nn_dict_det(i,j)
         #print (nn_dict)
         #elem_list=atoms.get_chemical_symbols()
@@ -292,7 +266,7 @@ def main():
                 pre_ele=elem_list[a]
             else:
                 pass
-        print (set_elem_list)
+        print ('set_elem_list={}'.format(set_elem_list))
         if(set_elem_list == elements):
             pass
         else:
@@ -300,43 +274,31 @@ def main():
             exit(1)
         #positions=atoms.get_positions()
         count_bond=func_all.bond_pair_count(pairs,i,j,elem_list)
-        print(count_bond)
-        print(pref_pair_req,pairs,elements,num_each)
+        print('count_bonds={}'.format(count_bond))
+        print('pref_pair_reg,pairs,elements,num_each={}{}{}{}'.format(pref_pair_req,pairs,elements,num_each))
         bond_trend=False
         while (bond_trend == False):
             bond_trend,swap_dict,num_swap_pos=bond_count_trend(pref_pair_req,pairs,elements,num_each,\
                     nn_dict,count_bond,num_delta,atoms,cutoff)
-            print (bond_trend)
-        #1/0
-        #num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2=max_swap.swap_pos(pref_pair_req,\
-        #        pairs,elements,num_each,nn_dict,count_bond)
-        #print (elem_list)
-        #initialising the count_bond_re numpy array
-        #count_bond_re=np.full(len(pairs),0,dtype=float)
-        #for item in swap_dict:
-        #    print (item,swap_dict[item],elem_list[item],elem_list[swap_dict[item]])
+            #print ('bond_trend={}'.format(bond_trend))
         #generating atoms object with diff delta paramter
         list_num_swap=np.full(num_delta,-1,dtype=int)
         list_num_swap=div_equal(num_delta,num_swap_pos)
-        print (list_num_swap)
+        #print (list_num_swap)
         #cleaning the directory
-        #if os.path.exists("*_woutdis.xyz"):
+
         for filename in glob.glob("*_woutdis.xyz"):
             os.remove(filename)
         for filename in glob.glob("*_woutdis.vasp"):
             os.remove(filename)
 
-        for num,item in enumerate(list_num_swap):
-        #    if(num==0):
+        for num,item in enumerate(list_num_swap): 
             at_ear=atoms
             at=atoms_gen(item,at_ear,swap_dict)
-        #        at_ear=at
-        #    else:
-        #        at=atoms_gen(item,at_ear,swap_dict)
-        #        at_ear=at
             count_bonds_re=sro_count_bond(at,cutoff,pairs)
             delta,num_bond_disorder=func_all.order_para_cal(pairs,count_bonds_re,num_like,num_unlike,total_num_bonds) 
             print (pairs,count_bonds_re,delta)
+            func_all.log_write(cal_mode,pairs,count_bonds_re,delta,end=False)
             if(delta < 0.):
                 write('neg_{:.4f}_woutdis.xyz'.format(np.abs(delta)),at)
                 write('neg_{:.4f}_woutdis.vasp'.format(np.abs(delta)),at)
@@ -350,14 +312,10 @@ def main():
         else:
             write('pos_{:.4f}_woutdis.xyz'.format(0.),atoms)
             write('pos_{:.4f}_woutdis.vasp'.format(0.),atoms)
-
-        #with open('test.dat','a') as out:
-        #    out.write(str (count_bonds))
-        #    out.write('\t')
-        #    out.write(str (atom_left))
-        #    out.write('\n')
+        #printing citation information
+        bib.citation()
+        func_all.log_write(cal_mode,pairs,count_bonds_re,delta,end=True)
     else:
-        print('cal_mode val not right')
-        exit(1)
+        raise Exception('cal_mode val not right')
 if __name__=="__main__":
     main()

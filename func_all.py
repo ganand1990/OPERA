@@ -6,6 +6,8 @@ from ase import Atoms
 from ase.lattice.cubic import FaceCenteredCubic
 from ase.neighborlist import neighbor_list
 import time
+from datetime import date, time, datetime
+
 def number_det(atom,elements,crystal):
     '''
 
@@ -217,6 +219,14 @@ def pair_index(pairs,at1,at2):
             pass
     return num
 def nn_dict_det(i,j):
+    '''
+    Parameter:
+        i: Atom identity
+        j: Nearest-neighbour (NN) of ith atom
+
+    Returns:
+        nn_dict: Dictionary with key (i) and values (NN atoms of i)
+    '''
     nn_dict={}
     item_ear=-1
     for num,item in enumerate(i):
@@ -290,7 +300,7 @@ def lat_para_det(ele_rad,an_rad,crystal):
     if (crystal == 'fcc'):
         rmean = 0.
         for val in ele_rad:
-            rmean = rmean + val;
+            rmean = rmean + val
         rmean = rmean/len(ele_rad)
         
         lat_para = 2.*1.414*rmean
@@ -319,3 +329,23 @@ def lat_para_det(ele_rad,an_rad,crystal):
         return lat_para
     else:
         raise Exception('Crystal structure not implemented')
+
+def log_write(cal_mode,pairs,count_bonds,delta,end):
+    '''
+    
+    '''
+    if (cal_mode == 0):
+        pass #we are not writing log file for the disordered structure generation.
+    if (cal_mode == 1):
+        with open('OPERA.log','a') as out:
+            out.write(' '.join(pairs))
+            out.write('\t')
+            out.write(' '.join(str(count_bonds)))
+            out.write('\t')
+            out.write(str(delta))
+            if (end == True):
+                out.write('\n')
+                out.write('log file written at:{}'.format(datetime.now()))
+                out.write('\n')
+            elif (end == False):
+                out.write('\n')
