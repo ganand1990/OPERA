@@ -23,9 +23,7 @@ def CA_SP_det(bond1,bond2,pref_pair):
         unpref_at1 = first_x
     else:
         raise Exception('Issue with the unpref_at1 determination')
-    #print('Issue with the unpref_at1 determination')
-    #print('pref_at1,unpref_at1={},{}'.format(pref_at1,unpref_at1))
-
+    
     first_y = bond2.split('-')[0]
     second_y = bond2.split('-')[1]
     if(first_y == pref_pair[0] or first_y == pref_pair[1]):
@@ -36,8 +34,6 @@ def CA_SP_det(bond1,bond2,pref_pair):
         unpref_at2=first_y
     else:
         raise Exception('Issue with pref_at2 determination')
-        #print('Issue with pref_at2 determination')
-        #print('pref_at2,unpref_at2={},{}'.format(pref_at2,unpref_at2))
         '''
         This part ensure that [CA1,CA2] and [SP1,SP2] are generated in a way
         that CA2-SP1 preferred bond is generated.
@@ -89,7 +85,6 @@ def bond_swap_metric(group1,group2,pref_pair):
         for num2,item2 in enumerate(group2):
             central_pair,swap_pair = CA_SP_det(item1,item2,pref_pair)
             spair = []
-            #print ('group1,group2,central_pair,swap_pair={},{},{},{}'.format(item1,item2,central_pair,swap_pair))
             '''
             central_pair[0] - swap_pair[1] forms the preferred bonds and there is associated rise in the propensity
             of central_pair[1] - swap_pait[0] bond, with decrease in the central_pair[0] - swap_pair [0] and 
@@ -147,13 +142,11 @@ def bond_swap_metric(group1,group2,pref_pair):
             spair.append(num1)
             spair.append(num2)
             metric[count] = first + second + third + fourth
-            #print ('swap_pair,item1,item2,metric[count]={},{},{},{}'.format(swap_pair,item1,item2,metric[count]))
             count += 1
             
             spairs.append(spair)
     
 
-    #print (spairs,metric,len(spairs),len(metric))        
     #sorting the metric and arranging bonds 
     sorted_index_pos = np.flip([index for index, num in sorted(enumerate(metric), key=lambda x: x[-1])])
     #print (sorted_index_pos)
@@ -190,8 +183,7 @@ def group_determination(pref_pair_req,pairs):
     #TEST
     if(len(pref_pair) == 0):
         raise Exception('Issue with pref_pair list') 
-        #print('Issue with pref_pair list')
-        #exit(1)
+    
     group1_tmp=[]
     group2_tmp=[]
     count_like=0
@@ -215,7 +207,6 @@ def group_determination(pref_pair_req,pairs):
             temp1=item.split('-')[0]
             temp2=item.split('-')[1]
             if(temp1==pref_pair[0] or temp2==pref_pair[1]):
-                #print(temp1,temp2)
                 if(temp1==pref_pair[0] and temp2==pref_pair[1]):
                     pass
                 elif(count_like%2 != 0):
@@ -225,9 +216,8 @@ def group_determination(pref_pair_req,pairs):
                     group2_tmp.append(item)
                     count_like+=1
     
-    #print ('group1_tmp, group2_tmp={}{}'.format(group1_tmp,group2_tmp))
     group1,group2 = bond_swap_metric(group1_tmp,group2_tmp,pref_pair)
-    
+    #print ('group1, group2={}{}'.format(group1,group2))    
     #TODO possibly the below-given code is redundant as we are simply
     #generating the group1 and group2 with an idea that swap between
     #bonds are carried out to increase the value of a matric which
@@ -254,15 +244,13 @@ def group_determination(pref_pair_req,pairs):
                 pass
             num=random.randint(0,(len(group1)-1))
             group1.pop(num)
-            #for num in range(temp):
-            #    group1.pop(num)
+             
         elif(len(group1) < len(group2)):
             temp=len(group2)-len(group1)
             #temp should always be equal to 1
             #as to make any number even from odd only one should be removed
             if (temp != 1):
-                print ('Issue with group1 and group2 generation-2')
-                exit(1)
+                raise Exception('Issue with group1 and group2 generation-2')
             else:
                 pass
             num=random.randint(0,(len(group2)-1))
@@ -309,62 +297,18 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
     #on the basis of sequential access to group-1. We need to take bond from
     #group1, such that prespecified pref_bond instances would increase, and 
     #and unpref_bond (which needs to be specified) instances would decrease.
+    '''
+    Assumption: Generally the one bond pair swap fills up the forbidden list.
+    Such assumption may be revisited for very large supercell. EmpriricaLLY, it
+    seems that for the compostional constraints, swap beyond one pair of bonds
+    might not possible.
+    IF, swap beyond one pair of bonds is required, major changes would be required
+    in this module as well as main module.
+    '''
     for num_x,x in enumerate(group1): #New group definition updated.
         num_swap_temp=0
-        #swap_pair=[]
-        #central_pair=[]
-        #first_x=x.split('-')[0]
-        #second_x=x.split('-')[1]
-        #if(first_x == pref_pair[0] or first_x == pref_pair[1]):
-        #    unpref_at1=second_x
-        #    pref_at1=first_x
-        #elif(second_x == pref_pair[0] or second_x == pref_pair[1]):
-        #    pref_at1=second_x
-        #    unpref_at1=first_x
-        #else:
-        #    raise Exception('Issue with the unpref_at1 determination')
-            #print('Issue with the unpref_at1 determination')
-        #print('pref_at1,unpref_at1={},{}'.format(pref_at1,unpref_at1))
-        #for num_y,y in enumerate(group2):
-        #    first_y=y.split('-')[0]
-        #    second_y=y.split('-')[1]
-        #    if(first_y == pref_pair[0] or first_y == pref_pair[1]):
-        #        pref_at2=first_y
-        #        unpref_at2=second_y
-        #    elif(second_y == pref_pair[0] or second_y == pref_pair[1]):
-        #        pref_at2=second_y
-        #        unpref_at2=first_y
-        #    else:
-        #        raise Exception('Issue with pref_at2 determination')
-        #        #print('Issue with pref_at2 determination')
-        #    print('pref_at2,unpref_at2={},{}'.format(pref_at2,unpref_at2))
-        #    '''
-        #    This part ensure that [CA1,CA2] and [SP1,SP2] are generated in a way
-        #    that CA2-SP1 preferred bond is generated.
-        #    '''
-            #if(pref_pair[0] != pref_pair[1]): #and unpref_at1 != unpref_at2): #unlike atoms pref
-            #    swap_pair.append(unpref_at1)
-            #    swap_pair.append(pref_at2)
-            #    central_pair.append(pref_at1)
-            #    central_pair.append(unpref_at2)
-            #    group2.pop(num_y)
-            #    break
-            #elif(pref_pair[0] == pref_pair[1]): #and unpref_at1 != unpref_at2):
-            #    swap_pair.append(unpref_at1)
-            #    swap_pair.append(pref_at1)
-            #    central_pair.append(pref_at1)
-            #    central_pair.append(unpref_at2)
-            #    group2.pop(num_y)
-            #    break
         central_pair,swap_pair = CA_SP_det(group1[num_x],group2[num_x],pref_pair)
         print('swap_pair,central_pair={}{}'.format(swap_pair,central_pair))
-        #continue
-        #1/0
-        #finding the maximum like atom swap possible
-        #determination of indices of pref_pair, as defined in the element list
-        #swap_pair=['Mn','Ni']
-        #central_pair=['Mn','Ni']
-        #pref_pair=['Mn','Ni'] 
         indx_first=-1 #index of first element of the central_pair
         indx_second=-1 #index of second element of the central_pair
         indx_first_swap=-1 #index of first element of the swap_pair
@@ -375,24 +319,14 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                 indx_first=num
             if(item == central_pair[1]):
                 indx_second=num
-        print('indx_first,indx_second={},{}'.format(indx_first,indx_second))
+        #print('indx_first,indx_second={},{}'.format(indx_first,indx_second))
         for num,item in enumerate(elements):
             if(item == swap_pair[0]):
                 indx_first_swap=num
             if(item == swap_pair[1]):
                 indx_second_swap=num
-        print('indx_first_swap,indx_second_swap={},{}'.format(indx_first_swap,indx_second_swap))
+        #print('indx_first_swap,indx_second_swap={},{}'.format(indx_first_swap,indx_second_swap))
 
-        #intialising a 2D array, which would store the forbidden indices
-        #rows=len(elements)
-        #keeping a chance for the cases, where number of elements might be different!
-        #cols=[]
-        #for item in num_each:
-        #    cols.append(item)
-        #forbidden_vals=[[-1 for a in range(cols[b])] for b in range(rows)]
-        #counts=np.zeros(len(elements))
-        #forbidden_list=[]
-        #num_swap=0
         if(indx_first == 0):
             low_range=0
             high_range=num_each[indx_first]
@@ -405,7 +339,7 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
             exist=True  #binary variable depicting whether the central_pair[0] is available.
             #exist=True; If a is in the forbidden_list, False; otherwise.
             #print ('len(forbidden_vals[indx_first])={}'.format(sum(value for value in forbidden_vals[indx_first] if value != -1)))
-            if (len(forbidden_vals[indx_first]) == 0): #TODO this if-else statement might be redundant!
+            if (len(forbidden_vals[indx_first]) == 0): #TODO this if-else statement might be redundant, as FL array has been initialised to -1!
                 exist=False
             else:
                 for item in forbidden_vals[indx_first]:
@@ -486,8 +420,6 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                         present2=True
                 else:
                     if(f >= num_each_max[indx_first_swap-1] and f < num_each_max[indx_first_swap]):
-                        #print ('checking swapable_first={},{},{}'.format(f,num_each_max[indx_first_swap-1],\
-                        #        num_each_max[indx_first_swap]))
                         present2=False #ele in nnlist1 is swap_pair[0]
                     else:
                         present2=True
@@ -546,17 +478,18 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                             break
                 #Similarly, for nnlist2, if swap_pair[0] is found, it
                 #needs to be frozen and entered into FL.
-                for item in nnlist2:
-                    indx=func_all.indx_find(num_each,item,elements)
-                    if(indx == indx_first_swap): #if,desired atom is already in the nnlist1, freeze it!
-                        #ensuring that addtion beyond max limit is not allowed.
-                        avl_space=num_each[indx]-counts[indx]
-                        if(avl_space >= 1):
-                            forbidden_vals[indx][int (counts[indx])]=item
-                            counts[indx]+=1
-                            forbidden_list.append(item)
-                        else:
-                            break
+                #TODO This might not be required.
+                #for item in nnlist2:
+                #    indx=func_all.indx_find(num_each,item,elements)
+                #    if(indx == indx_first_swap): #if,desired atom is already in the nnlist1, freeze it!
+                #        #ensuring that addtion beyond max limit is not allowed.
+                #        avl_space=num_each[indx]-counts[indx]
+                #        if(avl_space >= 1):
+                #            forbidden_vals[indx][int (counts[indx])]=item
+                #            counts[indx]+=1
+                #            forbidden_list.append(item)
+                #        else:
+                #            break
 
                 #print(a,len(swapable_second))
                 for num,item1 in enumerate(swapable_second):
@@ -577,7 +510,7 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                             else:
                                 break
 
-            if(id_central_pref == 1): #if central_pair[1] is in the pref_pair
+            elif(id_central_pref == 1): #if central_pair[1] is in the pref_pair
                 #freezing swap_pair[0] atoms in nnlist2 
                 for item in nnlist2:
                     indx=func_all.indx_find(num_each,item,elements)
@@ -590,18 +523,21 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                             forbidden_list.append(item)
                         else:
                             break
-                #freezing swap_pair[1] atoms in nnlist1 
-                for item in nnlist1:
-                    indx=func_all.indx_find(num_each,item,elements)
-                    if(indx == indx_second_swap):
-                        #ensuring that addtion beyond max limit is not allowed.
-                        avl_space=num_each[indx]-counts[indx]
-                        if(avl_space >= 1):
-                            forbidden_vals[indx][int (counts[indx])]=item
-                            counts[indx]+=1
-                            forbidden_list.append(item)
-                        else:
-                            break
+                #freezing swap_pair[1] atoms in nnlist1
+                #Below is  being commented out with an understanding that we are interested
+                #in increasing the propensity of the pref_bond, associated change in other 
+                #bond is not out concern.
+                #for item in nnlist1:
+                #    indx=func_all.indx_find(num_each,item,elements)
+                #    if(indx == indx_second_swap):
+                #        #ensuring that addtion beyond max limit is not allowed.
+                #        avl_space=num_each[indx]-counts[indx]
+                #        if(avl_space >= 1):
+                #            forbidden_vals[indx][int (counts[indx])]=item
+                #            counts[indx]+=1
+                #            forbidden_list.append(item)
+                #        else:
+                #            break
 
                 #print(a,len(swapable_first))
                 for num,item1 in enumerate(swapable_first):
@@ -619,10 +555,12 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                                 break
                             else:
                                 break
+            else:
+                raise Exception('id_central_pair could not be determined')
 
-            print(a,len(swapable_first),len(swapable_second),counts[indx_first_swap],counts[indx_second_swap])
+            print('a,swapable_first,swapable_second,counts[indx_first_swap],counts[indx_second_swap]={},{},{},{},{}'.format(a,\
+                    swapable_first,swapable_second,counts[indx_first_swap],counts[indx_second_swap]))
             if(len(swapable_first) >= len(swapable_second) and len(swapable_first) != 0 and len(swapable_second) != 0):
-                #print(counts[indx_first_swap],counts[indx_second_swap])
                 #ensuring that addition beyond max limit is not allowed
                 max_swap_pos=-1
                 temp_arr=np.zeros(3) #this array will store the 3 values, of ehich min would be taken
@@ -691,6 +629,21 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
 
                     num_swap+=1
                     num_swap_temp+=1
+            elif (len(swapable_first) == 0 or len(swapable_second) == 0):
+                #num_swap = 0 #No swap is possible.
+                '''
+                Below is just being defined, as they need to be passed to the main module for 
+                bond_count_trend function. Since num_swap_pos = 0, it would change the bond_trend
+                to false, intially so these variables will not be accessed.
+                '''
+                indx_red1 = func_all.pair_index(pairs,central_pair[0],swap_pair[0])
+                indx_red2 = func_all.pair_index(pairs,central_pair[1],swap_pair[1])
+                indx_inc1 = func_all.pair_index(pairs,central_pair[0],swap_pair[1])
+                indx_inc2 = func_all.pair_index(pairs,central_pair[1],swap_pair[0])
+
+            
+            else:
+                raise Exception('Issue with the swap_dict addition after swapable atoms determination')
 
         print('pairs={}'.format(pairs))
         print('indx_red1,indx_red2,indx_inc1,indx_inc2={},{},{},{}'.format(indx_red1,indx_red2,indx_inc1,indx_inc2))

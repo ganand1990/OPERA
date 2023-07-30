@@ -8,6 +8,7 @@ import max_swap
 import os,glob
 import time
 import bib
+import warnings
 def calculation_mode():
     cal_mode = 1#calculation mode; 0 for random structure gen and 1 for reading the random file and generating SRO confs
     return cal_mode
@@ -21,27 +22,21 @@ def input_data():
     anion = ['O'] #add any anion (not same as in element list) as proxy here.
     an_rad = 0. #Anion radius; Set it zero for non-ionic structure. 
     crystal='fcc'
-    Tmax = 5 #parameter for max temperature in simulated annealing
+    Tmax = 5 #parameter for max temerature in simulated annealing
     Tnum = 1000 #parameter for number of steps for T -> 0 in SA
     #order in which, atoms are named in pref_pair does not matter.
     fluc=0.1
     inp_file='inp.cfg' #input file for random structure generation
     random_file = '0.0_random.xyz'
     proxy_ele='Ca'
-    pref_pair_req=['Ni','Mn'] #it can be in the arbitrary order
+    pref_pair_req=['Cr','Cr'] #it can be in the arbitrary order
     num_delta=5 #number of delta para from 0 to max delta possible
-    #cal_mode=1 #calculation mode; 0 for random structure gen and 1 for reading the random file and generating SRO confs
     return elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum
 
 def make_data(calc_mode):
     elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum=input_data()
     #Guessing the lattice parameter with Vegard's Law
     lat_param = func_all.lat_para_det(ele_rad,an_rad,crystal)
-    #latparam = 0.
-    #for item in latpara_list:
-    #    latparam = latparam + item
-    #latparam = latparam/(len(latpara_list))
-    #print (lat_param)
     if ( calc_mode == 0 ):    
         at = read('{}'.format(inp_file))
     elif ( calc_mode == 1 ):
@@ -73,8 +68,6 @@ def make_data(calc_mode):
     elem_list = func_all.element_assign(elements,num_each)
     #position of anions and cations are stored separately
     #for alloys, anion array would be empty.
-    #num_metal = sum(a for a in num_each)
-    #num_anion = len(at) - num_metal
     anion_pres = (at.symbols == anion)
     anion_pos = [a for a,b in enumerate(anion_pres) if b == True]
     total_pos = [a for a in range(len(at))]
@@ -143,13 +136,16 @@ def make_data(calc_mode):
     #TEST to ensure the right CN
     cnmax=func_all.maxnn_det(crystal)
     if(cnmax < cn):
-        print ("Decrease fluc_fact to make CN right!\n")
-        exit(1)
+        raise Exception("Decrease fluc_fact to make CN right!\n")
     if(cnmax > cn):
-        print ("Increase the fluc_fact to make CN right!\n")
-        exit(1)
-    return elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum,i_mod,j_mod,elem_list,rand_pos,anion_coord,anion
+        raise Exception("Increase the fluc_fact to make CN right!\n")
+    
+    return elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req\
+            ,num_delta,Tmax,Tnum,i_mod,j_mod,elem_list,rand_pos,anion_coord,anion
 def div_equal(num_delta,num_swap_pos):
+    '''
+
+    '''
     list_num_swap=np.full(num_delta,-1,dtype=int)
     val=int (num_swap_pos/num_delta)
     count=0
@@ -163,6 +159,14 @@ def div_equal(num_delta,num_swap_pos):
             ear_val=list_num_swap[num]
     return list_num_swap
 def atoms_gen(num_swap,atoms,swap_dict):
+    '''
+        Parameters:
+            num_swap:
+            atoms:
+            swap_dict:
+        Returns:
+            at:
+    '''
     counter=0
     elem_list=atoms.get_chemical_symbols()
     pos=atoms.get_positions()
@@ -192,6 +196,14 @@ def atoms_gen(num_swap,atoms,swap_dict):
     at.set_pbc((True,True,True))
     return at
 def sro_count_bond(atoms,cutoff,pairs):
+    '''
+        Parameters:
+            atoms:
+            cutoff:
+            pairs:
+        Returns:
+            count_bond:
+    '''
     #determination of nn and nn_dict,bond count 
     i,j=neighbor_list('ij',atoms,cutoff)
     nn_dict=func_all.nn_dict_det(i,j)
@@ -200,62 +212,80 @@ def sro_count_bond(atoms,cutoff,pairs):
     count_bond=func_all.bond_pair_count(pairs,i,j,elem_list)
     return count_bond
 def bond_count_trend(pref_pair_req,pairs,elements,num_each,nn_dict,count_bond,num_delta,atoms,cutoff):
+    '''
+        Parameters::
+            pref_pair_req:
+            pairs:
+            elements:
+            num_each:
+            nn_dict:
+            count_bond:
+            num_delta:
+            atoms:
+            cutoff:
+
+        Returns:
+            bond_trend:
+            swap_dict:
+            num_swap_pos:
+
+    '''
     num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2=max_swap.swap_pos(pref_pair_req,\
                 pairs,elements,num_each,nn_dict,count_bond)
+    #print ('num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2={},{},{},{},{},{}'.format(\
+    #        num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2))
     list_num_swap=np.full(num_delta,-1,dtype=int)
     list_num_swap=div_equal(num_delta,num_swap_pos)
-    #count_bond_re=counts
-    bond_trend=True
-    for num,item in enumerate(list_num_swap):
-        #putting a condition that, if the list_num_swap has zeros, then bond_trend
-        #should be False 
-        set_num_swap=set(list_num_swap)
-        counter_num_swap=0
-        for a in range(len(set_num_swap)):
-            counter_num_swap+=1
-        if (counter_num_swap < num_delta):
-            print('If this persists, decrease the num_delta value or increase the number of atoms in the system')
-            #this condition can arise if the num_delta is greater than max swap possible.
-            bond_trend=False
-            break
-        else:
-            pass
-        at_ear=atoms
-        at=atoms_gen(item,at_ear,swap_dict)
-        count_bonds_re=sro_count_bond(at,cutoff,pairs)
-        if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or \
+    #print ('list_num_swap={}'.format( list_num_swap))
+    if (num_swap_pos < num_delta):
+        #this condition can arise if the num_delta is greater than max swap possible.
+        bond_trend = False
+        warnings.warn('If this persists, decrease the num_delta value or increase the number of atoms in the system')
+    else:
+        bond_trend=True
+        '''
+        A check is being introduced that swap leads to the increase in the desired bond and 
+        decrease in the undesired bonds.
+        '''
+        for num,item in enumerate(list_num_swap):
+            at_ear=atoms
+            at=atoms_gen(item,at_ear,swap_dict)
+            count_bonds_re=sro_count_bond(at,cutoff,pairs)
+            #TODO There is chance of modification below to tailor the increase or decrease 
+            #of the desired and undesired bonds, respectively.
+            if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or \
                 (count_bonds_re[indx_red2] > count_bond[indx_red2]) or \
                 (count_bonds_re[indx_inc1] < count_bond[indx_inc1]) or \
                 (count_bonds_re[indx_inc2] < count_bond[indx_inc2])):
-            bond_trend=False
-            break
-        else:
-            count_bond=count_bonds_re
+                bond_trend=False
+                break
+            else:
+                count_bond=count_bonds_re #TODO seems redundant!
     return bond_trend,swap_dict,num_swap_pos    
 
 def main():
     cal_mode = calculation_mode()
-    #elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data()
     if( cal_mode == 0 ):
         start=time.time()
-        #random_reach=False
-        #while (random_reach == False):
-        elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data(cal_mode)
-        #elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,cal_mode,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data()
-        count_bonds,atom_left,delta,ideal_num=random_gen.random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion)
+        elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
+                pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord\
+                ,anion=make_data(cal_mode)
+        count_bonds,atom_left,delta,ideal_num=random_gen.random_struc_gen(proxy_ele,\
+                elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,Tmax,Tnum,\
+                i,j,elem_list,rand_pos,anion_coord,anion)
         print ('pairs,count_bonds,delta={},{},{}'.format(pairs,count_bonds,delta))
         end=time.time()
         print ('time-taken={}'.format(end-start))
         #printing citation information
         bib.citation()
     elif ( cal_mode == 1):
-        elements,num_each,atoms,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,anion_coord,anion=make_data(cal_mode)
+        elements,num_each,atoms,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
+                pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,\
+                anion_coord,anion=make_data(cal_mode)
         
         
         total_num_bonds=len(i) #total number of bonds
         nn_dict=func_all.nn_dict_det(i,j)
-        #print (nn_dict)
-        #elem_list=atoms.get_chemical_symbols()
         #Test that if the serial of elements in elem_list and elements ][ should be same.
         pre_ele=elem_list[0]
         set_elem_list=[]
@@ -266,21 +296,20 @@ def main():
                 pre_ele=elem_list[a]
             else:
                 pass
-        print ('set_elem_list={}'.format(set_elem_list))
+        #print ('set_elem_list={}'.format(set_elem_list))
         if(set_elem_list == elements):
             pass
         else:
-            print ('elem_list and elements list dont have same order')
-            exit(1)
+            raise Exception('elem_list and elements list dont have same order')
         #positions=atoms.get_positions()
         count_bond=func_all.bond_pair_count(pairs,i,j,elem_list)
-        print('count_bonds={}'.format(count_bond))
-        print('pref_pair_reg,pairs,elements,num_each={}{}{}{}'.format(pref_pair_req,pairs,elements,num_each))
+        #print('count_bonds={}'.format(count_bond))
+        #print('pref_pair_req,pairs,elements,num_each={}{}{}{}'.format(pref_pair_req,pairs,elements,num_each))
         bond_trend=False
         while (bond_trend == False):
             bond_trend,swap_dict,num_swap_pos=bond_count_trend(pref_pair_req,pairs,elements,num_each,\
                     nn_dict,count_bond,num_delta,atoms,cutoff)
-            #print ('bond_trend={}'.format(bond_trend))
+            #print ('bond_trend in main={}'.format(bond_trend))
         #generating atoms object with diff delta paramter
         list_num_swap=np.full(num_delta,-1,dtype=int)
         list_num_swap=div_equal(num_delta,num_swap_pos)
@@ -314,6 +343,7 @@ def main():
             write('pos_{:.4f}_woutdis.vasp'.format(0.),atoms)
         #printing citation information
         bib.citation()
+        #printing log file
         func_all.log_write(cal_mode,pairs,count_bonds_re,delta,end=True)
     else:
         raise Exception('cal_mode val not right')
