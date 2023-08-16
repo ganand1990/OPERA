@@ -340,9 +340,11 @@ def log_write(cal_mode,pairs,count_bonds,delta,end):
         with open('OPERA.log','a') as out:
             out.write(' '.join(pairs))
             out.write('\t')
-            out.write(' '.join(str(count_bonds)))
+            for val in count_bonds:
+                out.write('{}'.format(str(val)))
+                out.write(' ')
             out.write('\t')
-            out.write(str(delta))
+            out.write(str('{:.4f}'.format(delta)))
             if (end == True):
                 out.write('\n')
                 out.write('log file written at:{}'.format(datetime.now()))

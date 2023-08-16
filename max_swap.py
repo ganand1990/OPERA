@@ -479,19 +479,18 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                 #Similarly, for nnlist2, if swap_pair[0] is found, it
                 #needs to be frozen and entered into FL.
                 #TODO This might not be required.
-                #for item in nnlist2:
-                #    indx=func_all.indx_find(num_each,item,elements)
-                #    if(indx == indx_first_swap): #if,desired atom is already in the nnlist1, freeze it!
-                #        #ensuring that addtion beyond max limit is not allowed.
-                #        avl_space=num_each[indx]-counts[indx]
-                #        if(avl_space >= 1):
-                #            forbidden_vals[indx][int (counts[indx])]=item
-                #            counts[indx]+=1
-                #            forbidden_list.append(item)
-                #        else:
-                #            break
+#                for item in nnlist2:
+#                    indx=func_all.indx_find(num_each,item,elements)
+#                    if(indx == indx_first_swap): #if,desired atom is already in the nnlist1, freeze it!
+#                        #ensuring that addtion beyond max limit is not allowed.
+#                        avl_space=num_each[indx]-counts[indx]
+#                        if(avl_space >= 1):
+#                            forbidden_vals[indx][int (counts[indx])]=item
+#                            counts[indx]+=1
+#                            forbidden_list.append(item)
+#                        else:
+#                            break
 
-                #print(a,len(swapable_second))
                 for num,item1 in enumerate(swapable_second):
                     nnlist=nn_dict[item1]
                     for item2 in nnlist:
@@ -527,19 +526,18 @@ def swap_pos(pref_pair_req,pairs,elements,num_each,nn_dict,count_bonds):
                 #Below is  being commented out with an understanding that we are interested
                 #in increasing the propensity of the pref_bond, associated change in other 
                 #bond is not out concern.
-                #for item in nnlist1:
-                #    indx=func_all.indx_find(num_each,item,elements)
-                #    if(indx == indx_second_swap):
-                #        #ensuring that addtion beyond max limit is not allowed.
-                #        avl_space=num_each[indx]-counts[indx]
-                #        if(avl_space >= 1):
-                #            forbidden_vals[indx][int (counts[indx])]=item
-                #            counts[indx]+=1
-                #            forbidden_list.append(item)
-                #        else:
-                #            break
+#                for item in nnlist1:
+#                    indx=func_all.indx_find(num_each,item,elements)
+#                    if(indx == indx_second_swap):
+#                        #ensuring that addtion beyond max limit is not allowed.
+#                        avl_space=num_each[indx]-counts[indx]
+#                        if(avl_space >= 1):
+#                            forbidden_vals[indx][int (counts[indx])]=item
+#                            counts[indx]+=1
+#                            forbidden_list.append(item)
+#                        else:
+#                            break
 
-                #print(a,len(swapable_first))
                 for num,item1 in enumerate(swapable_first):
                     nnlist=nn_dict[item1]
                     for item2 in nnlist:

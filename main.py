@@ -17,8 +17,8 @@ def input_data():
     #ele_rad = [1.62,1.47,1.60,1.59]
     #elements = ['Mo','Nb','Ta','W']
     #ele_rad = [1.39,1.46,1.46,1.39]
-    elements = ['Co','Cr','Fe','Mn','Ni']#,'Ni'] #Cr removed
-    ele_rad = [1.25,1.28,1.26,1.27,1.24]#,1.24] #Cr:1.28 Ang
+    elements = ['Co','Cr','Ni']#'Fe','Mn','Ni']#,'Ni'] #Cr removed
+    ele_rad = [1.25,1.28,1.24]#,1.24] #Cr:1.28 Ang, Fe: 1.26, Mn: 1.27
     anion = ['O'] #add any anion (not same as in element list) as proxy here.
     an_rad = 0. #Anion radius; Set it zero for non-ionic structure. 
     crystal='fcc'
@@ -29,7 +29,7 @@ def input_data():
     inp_file='inp.cfg' #input file for random structure generation
     random_file = '0.0_random.xyz'
     proxy_ele='Ca'
-    pref_pair_req=['Cr','Cr'] #it can be in the arbitrary order
+    pref_pair_req=['Co','Co'] #it can be in the arbitrary order
     num_delta=5 #number of delta para from 0 to max delta possible
     return elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum
 
