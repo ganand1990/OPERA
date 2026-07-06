@@ -1,5 +1,6 @@
 import func_all
 import numpy as np
+from ase.build import bulk
 from ase.io import write,read
 from ase import Atoms
 from ase.neighborlist import neighbor_list
@@ -37,10 +38,22 @@ def make_data(calc_mode):
     elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum=input_data()
     #Guessing the lattice parameter with Vegard's Law
     lat_param = func_all.lat_para_det(ele_rad,an_rad,crystal)
+    source_file = inp_file if calc_mode == 0 else random_file
+    source_exists = os.path.isfile(source_file)
     if ( calc_mode == 0 ):    
-        at = read('{}'.format(inp_file))
+        if source_exists:
+            at = read('{}'.format(inp_file))
+        else:
+            warnings.warn('inp.cfg is missing; using a generated fallback structure.')
+            at = bulk(elements[0], crystal, a=lat_param, cubic=True).repeat((18,18,18))
+            at.set_chemical_symbols(func_all.element_assign(elements, func_all.number_det(at, elements, crystal)))
     elif ( calc_mode == 1 ):
-        at = read('{}'.format(random_file))
+        if source_exists:
+            at = read('{}'.format(random_file))
+        else:
+            warnings.warn('0.0_random.xyz is missing; using a generated fallback structure.')
+            at = bulk(elements[0], crystal, a=lat_param, cubic=True).repeat((18,18,18))
+            at.set_chemical_symbols(func_all.element_assign(elements, func_all.number_det(at, elements, crystal)))
     else:
         raise Exception('Unidentified calc_mode value')
 
@@ -264,7 +277,7 @@ def bond_count_trend(pref_pair_req,pairs,elements,num_each,nn_dict,count_bond,nu
     return bond_trend,swap_dict,num_swap_pos    
 
 def main():
-    cal_mode = calculation_mode()
+    cal_mode = 0
     if( cal_mode == 0 ):
         start=time.time()
         elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
@@ -279,9 +292,23 @@ def main():
         #printing citation information
         bib.citation()
     elif ( cal_mode == 1):
+
         elements,num_each,atoms,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
-                pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,\
-                anion_coord,anion=make_data(cal_mode)
+            pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,\
+            anion_coord,anion=make_data(cal_mode)
+        print("CAL MODE =", cal_mode)
+
+        # print("\n" + "="*50)
+        # print("ATOM COUNT INFORMATION")
+        # print("="*50)
+
+        # print("Total atoms =", len(atoms))
+        # print("Composition =", atoms.get_chemical_symbols()[:10], "...")
+
+        # return
+
+    
+    
         
         
         total_num_bonds=len(i) #total number of bonds
@@ -347,5 +374,6 @@ def main():
         func_all.log_write(cal_mode,pairs,count_bonds_re,delta,end=True)
     else:
         raise Exception('cal_mode val not right')
+    
 if __name__=="__main__":
-    main()
+     main()
