@@ -56,27 +56,73 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
     else:
         pass 
 
-    first = np.full(3,0,dtype=float)
-    second = np.full(3,0,dtype=float)
+    # first = np.full(3,0,dtype=float)
+    # second = np.full(3,0,dtype=float)
     
-    first = [a for a in rand_pos[at1]]
-    second = [a for a in rand_pos[at2]]
-    #print (first,second,pos[at1],pos[at2])
-    for num,a in enumerate(second):
-        rand_pos[at1][num] = a
-    for num,a in enumerate(first):
-        rand_pos[at2][num] = a
+    # first = [a for a in rand_pos[at1]]
+    # second = [a for a in rand_pos[at2]]
+    # #print (first,second,pos[at1],pos[at2])
+    # for num,a in enumerate(second):
+    #     rand_pos[at1][num] = a
+    # for num,a in enumerate(first):
+    #     rand_pos[at2][num] = a
+#     elem_list[at1], elem_list[at2] = (
+#     elem_list[at2],
+#     elem_list[at1]
+# )
+    old_ele1 = elem_list[at1]
+    old_ele2 = elem_list[at2]
+
+    elem_list[at1] = old_ele2
+    elem_list[at2] = old_ele1
     #print ('at1,at2,pos[at1],pos[at2]={},{},{},{}'.format(at1,at2,pos[at1],pos[at2]))
     #print ('atoms.get_positions()[at1],atoms.get_positions()[at2]={},{}'.format(atoms.get_positions()[at1],atoms.get_positions()[at2]))
-    at = Atoms(cell=atoms.get_cell()) 
-    for a in range(len(rand_pos)):    
-        at.extend(Atoms('{}'.format(elem_list[a]),positions=[(rand_pos[a][0],rand_pos[a][1],rand_pos[a][2])]))
-    for a in range(len(anion_coord)):
-        at.extend(Atoms('{}'.format(anion[0]),positions=[(anion_coord[a][0],anion_coord[a][1],anion_coord[a][2])]))
-    at.set_pbc((True,True,True)) 
+    import time
+
+    t_build = time.time()
+    # at = Atoms(cell=atoms.get_cell()) 
+    # for a in range(len(rand_pos)):    
+    #     at.extend(Atoms('{}'.format(elem_list[a]),positions=[(rand_pos[a][0],rand_pos[a][1],rand_pos[a][2])]))
+    # for a in range(len(anion_coord)):
+    #     at.extend(Atoms('{}'.format(anion[0]),positions=[(anion_coord[a][0],anion_coord[a][1],anion_coord[a][2])]))
+    # at.set_pbc((True,True,True)) 
+#     at = Atoms(
+#     symbols=elem_list,
+#     positions=rand_pos,
+#     cell=atoms.get_cell(),
+#     pbc=True
+# )
+    if len(anion_coord) == 0:
+
+     at = Atoms(
+        symbols=elem_list,
+        positions=np.array(rand_pos),
+        cell=atoms.get_cell(),
+        pbc=True
+    )
+
+    else:
+
+     anion_symbols = [anion[0]] * len(anion_coord)
+
+     at = Atoms(
+        symbols=elem_list + anion_symbols,
+        positions=np.vstack((
+            np.array(rand_pos),
+            np.array(anion_coord)
+        )),
+        cell=atoms.get_cell(),
+        pbc=True
+    )
+    t_nn = time.time()
+
+    re_i, re_j = neighbor_list('ij', at, cutoff)
+
+    print("neighbor_list =", time.time() - t_nn)
+    print("Build Atoms =", time.time() - t_build)
     #print ('at.get_positions()[at1],at.get_positions()[at2]={},{}'.format(at.get_positions()[at1],at.get_positions()[at2]))
 
-    re_i,re_j=neighbor_list('ij',at,cutoff)
+    # re_i,re_j=neighbor_list('ij',at,cutoff)
     #modify i and j to include only metals and remove anions
     re_i_mod = []
     re_j_mod = []
@@ -84,15 +130,53 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
         if ( a < len(rand_pos) and b < len(rand_pos)):
             re_i_mod.append(a)
             re_j_mod.append(b)
+#     import time
 
-    re_count_bond = func_all.bond_pair_count(pairs,re_i_mod,re_j_mod,elem_list)
+#     t1 = time.time()
+
+#     re_count_bond = func_all.bond_pair_count(
+#     pairs,
+#     re_i_mod,
+#     re_j_mod,
+#     elem_list
+# )
+
+#     print("bond_pair_count =", time.time() - t1)
+#     re_count_bond = func_all.bond_pair_count(pairs,re_i_mod,re_j_mod,elem_list)
+    import time
+
+    t1 = time.time()
+
+    re_count_bond = func_all.bond_pair_count(
+    pairs,
+    re_i_mod,
+    re_j_mod,
+    elem_list
+)
+
+    print("bond_pair_count =", time.time() - t1)
     #print ('bond_num,re_count_bond,ideal_count={},{},{}'.format(bond_num,re_count_bond,ideal_count))
     
     #calculating difference between vectors
     dist_ear = np.linalg.norm(ideal_count-bond_num)
     dist_after = np.linalg.norm(ideal_count-re_count_bond)
     print ('dist_ear,dist_after,count_euc,count_euc_ear={},{},{},{}'.format(dist_ear,dist_after,count_euc,count_euc_ear))
-    
+    # error = ideal_count - bond_num
+
+#     print(
+#     "Step",
+#     counter,
+#     "Error",
+#     error
+# )
+#     largest = np.argmax(np.abs(error))
+
+#     print(
+#     "Largest error bond =",
+#     pairs[largest],
+#     "Error =",
+#     error[largest]
+# )
     if (dist_ear >= dist_after or count_euc > (10*count_euc_ear)): #or count_euc > (10*count_euc_ear)
         return at,re_count_bond,dist_after,rand_pos
     elif (dist_ear < dist_after):
@@ -103,10 +187,19 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
         if (counter >= len(T_profile)):
             #earlier swap is not accpeted and hence
             #positions are being changed to original.
-            for num,a in enumerate(first):
-                rand_pos[at1][num] = a
-            for num,a in enumerate(second):
-                rand_pos[at2][num] = a
+            # for num,a in enumerate(first):
+            #     rand_pos[at1][num] = a
+            # for num,a in enumerate(second):
+            #     rand_pos[at2][num] = a
+#             elem_list[at1], elem_list[at2] = (
+#     elem_list[at2],
+#     elem_list[at1]
+# )           
+            # old_ele1 = elem_list[at1]
+            # old_ele2 = elem_list[at2]
+
+            elem_list[at1] = old_ele2
+            elem_list[at2] = old_ele1
             return atoms,bond_num,dist_ear,rand_pos
         else:
             temp = T_profile[counter]
@@ -125,10 +218,16 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
             if (accept == True):
                 return at,re_count_bond,dist_after,rand_pos
             else:
-                for num,a in enumerate(first):
-                    rand_pos[at1][num] = a
-                for num,a in enumerate(second):
-                    rand_pos[at2][num] = a
+                # for num,a in enumerate(first):
+                #     rand_pos[at1][num] = a
+                # for num,a in enumerate(second):
+                #     rand_pos[at2][num] = a
+    #             elem_list[at1], elem_list[at2] = (
+    # elem_list[at2],
+    # elem_list[at1]
+                elem_list[at1] = old_ele1
+                elem_list[at2] = old_ele2
+
                 return atoms,bond_num,dist_ear,rand_pos
 
     else:
@@ -138,11 +237,55 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
         #    pos[at2][num] = a
         #return atoms,bond_num,dist_ear,pos
         return at,re_count_bond,dist_after,rand_pos
+# def best_swap_local(centre,elements,num_each,rand_pos,excluded_ele,   
+#                     atoms,elem_list,cutoff,pairs,bond_num,
+#                     ideal_count,count_euc_ear,count_euc,
+#                     T_profile,counter,anion_coord,anion):
+
+#     best_dist = 1e30           
+#                                                 #  MODIFIED
+#     best_atoms = atoms
+#     best_bond = bond_num
+#     best_pos = rand_pos
+
+#     for trial in range(20):
+
+#         rand_copy = [p.copy() for p in rand_pos]
+
+#         at,re_bond_num,dist_after,pos = swap_ideal(
+#             centre,
+#             elements,
+#             num_each,
+#             rand_copy,
+#             excluded_ele,
+#             atoms,
+#             elem_list,
+#             cutoff,
+#             pairs,
+#             bond_num,
+#             ideal_count,
+#             count_euc_ear,
+#             count_euc,
+#             T_profile,
+#             counter,
+#             anion_coord,
+#             anion
+#         )
+
+#         if dist_after < best_dist:
+
+#             best_dist = dist_after
+#             best_atoms = at
+#             best_bond = re_bond_num
+#             best_pos = pos
+
+#     return best_atoms,best_bond,best_dist,best_pos
 
 def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,elem_list,cutoff,Tmax,Tnum,anion_coord,anion):
     '''
 
     '''
+    delta_history = []   # <-- ADD THIS
     ideal_count = np.zeros(len(pairs))
     for num,item in enumerate(pairs):
         if (item.split('-')[0] == item.split('-')[1]):
@@ -200,11 +343,151 @@ def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,e
         #if (len(excluded_ele) == 0):
         #    el = random.randint(0,len(elements)-1)
         #    excluded_ele.append(elements[el])
-        centre = elements[random.randint(0,len(elements)-1)]
-        excluded_ele = []
-        excluded_ele.append(elements[random.randint(0,len(elements)-1)])
+        # centre = elements[random.randint(0,len(elements)-1)]
+        # excluded_ele = []
+        # excluded_ele.append(elements[random.randint(0,len(elements)-1)])
+        # bad_pairs = []
+#         error = ideal_count - bond_num
+
+#         weights = [abs(err) for err in error]
+
+# # If all errors are zero, stop
+#         if sum(weights) == 0:
+
+#          break
+
+#         chosen_idx = random.choices(
+#     range(len(pairs)),
+#     weights=weights,
+#     k=1
+# )[0]
+
+#         problem_pair = pairs[chosen_idx]
+
+#         A = problem_pair.split('-')[0]
+#         B = problem_pair.split('-')[1]
+
+#         centre = A
+#         excluded_ele = [B]
+
+#         print(
+#     "Target pair =",
+#     problem_pair,
+#     "Error =",
+#     error[chosen_idx],
+#     "Weight =",
+#     weights[chosen_idx]
+# )      
+#         print(
+#     "Chosen pair:",
+#     problem_pair,
+#     "Weight:",
+#     abs(error[chosen_idx])
+# )     
+        error = ideal_count - bond_num
+
+# ---------------------------------------
+# Top-K weighted bond selection
+# ---------------------------------------
+    
+        TOP_K = 2      # Try 2 first. Later you can test 3.
+
+        abs_error = np.abs(error)
+
+# Already converged
+        if np.sum(abs_error) == 0:
+         break
+
+# Indices sorted from largest to smallest error
+        sorted_idx = np.argsort(abs_error)[::-1]
+
+# Keep only the TOP_K largest errors
+        candidate_idx = sorted_idx[:TOP_K]
+
+# Their corresponding weights
+        candidate_weights = abs_error[candidate_idx]
+
+# Random weighted choice among Top-K
+        chosen_idx = random.choices(
+        candidate_idx.tolist(),
+        weights=candidate_weights.tolist(),
+    k=1
+)[0]
+
+        problem_pair = pairs[chosen_idx]
+
+        A = problem_pair.split('-')[0]
+        B = problem_pair.split('-')[1]
+
+        centre = A
+        excluded_ele = [B]
+
+        print("----------------------------------------")
+        print("Error vector :", error)
+        print("Top candidates :")
+
+        for idx in candidate_idx:
+         print(
+        pairs[idx],
+        " Error =",
+        error[idx],
+        " Weight =",
+        abs_error[idx]
+    )
+
+        print(
+    "Chosen pair :",
+    problem_pair
+)
+        print("----------------------------------------")
+
+        
+        
         at,re_bond_num,euc_dist,pos = swap_ideal(centre,elements,num_each,rand_pos,\
                 excluded_ele,atoms,elem_list,cutoff,pairs,bond_num,ideal_count,count_euc_ear,count_euc,T_profile,counter,anion_coord,anion)
+    #     if euc_dist < 10:
+
+    #      at,re_bond_num,euc_dist,pos = best_swap_local(
+    #     centre,
+    #     elements,
+    #     num_each,
+    #     rand_pos,
+    #     excluded_ele,
+    #     atoms,
+    #     elem_list,
+    #     cutoff,
+    #     pairs,
+    #     bond_num,
+    #     ideal_count,
+    #     count_euc_ear,
+    #     count_euc,
+    #     T_profile,
+    #     counter,
+    #     anion_coord,
+    #     anion
+    # )
+
+    #     else:
+
+    #      at,re_bond_num,euc_dist,pos = swap_ideal(
+    #     centre,
+    #     elements,
+    #     num_each,
+    #     rand_pos,
+    #     excluded_ele,
+    #     atoms,
+    #     elem_list,
+    #     cutoff,
+    #     pairs,
+    #     bond_num,
+    #     ideal_count,
+    #     count_euc_ear,
+    #     count_euc,
+    #     T_profile,
+    #     counter,
+    #     anion_coord,
+    #     anion
+    # )
         counter += 1
         #if euclidian distance is unchanged
         if (euc_dist == euc_ear):
@@ -219,6 +502,49 @@ def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,e
         atoms = at
         bond_num = re_bond_num
         rand_pos = pos
+    #     if euc_dist <= 100:
+
+    #      print("\nGenerating motif fingerprints...\n")
+
+    #      import motif_analysis
+
+    #      motif_db = motif_analysis.build_motif_database(
+    #     atoms,
+    #     cutoff
+    # )
+
+    #      rare_sites = motif_analysis.find_rarest_sites(
+    #     motif_db,
+    #     top_n=20
+    # )
+
+    #      print("\nTop rare motifs\n")
+
+    #      for site in rare_sites:
+
+    #       print(
+    #         site,
+    #         motif_db[site]["species"],
+    #         motif_db[site]["composition"],
+    #         motif_db[site]["frequency"]
+    #     )
+
+    #      break
+        total_num_bonds = np.sum(bond_num)
+
+        delta, _ = func_all.order_para_cal(
+        pairs,
+        bond_num,
+        int(len(elements)),
+        int(len(elements)*(len(elements)-1)/2),
+        total_num_bonds
+)
+        print(
+    f"Step={counter}, Delta={delta:.6f}"
+)
+
+
+        delta_history.append(delta)
         with open ('euc_distance.csv','a') as inp:
             inp.write(str(euc_dist))
             inp.write('\n')
@@ -463,6 +789,9 @@ def random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_
     if(delta == 0.0):
         write('{}_random.xyz'.format(delta),atoms_final)
         write('{}_random.vasp'.format(delta),atoms_final)
+  
+
+    write("delta0.xyz", atoms_final)
 
     '''
     #option-2: engineered shuffling
@@ -742,5 +1071,30 @@ def random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_
     #print ('returning val = {},{},{},{},{}'.format(check_count_bond,atom_left,delta,ideal_num,num_each))
     #ideal(ideal_num,pairs,check_count_bond,nn_dict,num_each,elements,cn,check_pos,check_at,list_element,cutoff)
     '''
-    return count_bond_final,atom_left,delta,ideal_num
+    
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+
+    pos = atoms_final.get_positions()
+    symbols = atoms_final.get_chemical_symbols()
+
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    for sym in set(symbols):
+
+        mask = np.array(symbols) == sym
+
+        ax.scatter(
+            pos[mask,0],
+            pos[mask,1],
+            pos[mask,2],
+            label=sym,
+            s=40
+        )
+
+    ax.legend()
+    plt.show()
+
+    return atoms_final,count_bond_final,atom_left,delta,ideal_num
     
