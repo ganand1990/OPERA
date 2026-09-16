@@ -56,27 +56,73 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
     else:
         pass 
 
-    first = np.full(3,0,dtype=float)
-    second = np.full(3,0,dtype=float)
+    # first = np.full(3,0,dtype=float)
+    # second = np.full(3,0,dtype=float)
     
-    first = [a for a in rand_pos[at1]]
-    second = [a for a in rand_pos[at2]]
-    #print (first,second,pos[at1],pos[at2])
-    for num,a in enumerate(second):
-        rand_pos[at1][num] = a
-    for num,a in enumerate(first):
-        rand_pos[at2][num] = a
+    # first = [a for a in rand_pos[at1]]
+    # second = [a for a in rand_pos[at2]]
+    # #print (first,second,pos[at1],pos[at2])
+    # for num,a in enumerate(second):
+    #     rand_pos[at1][num] = a
+    # for num,a in enumerate(first):
+    #     rand_pos[at2][num] = a
+#     elem_list[at1], elem_list[at2] = (
+#     elem_list[at2],
+#     elem_list[at1]
+# )
+    old_ele1 = elem_list[at1]
+    old_ele2 = elem_list[at2]
+
+    elem_list[at1] = old_ele2
+    elem_list[at2] = old_ele1
     #print ('at1,at2,pos[at1],pos[at2]={},{},{},{}'.format(at1,at2,pos[at1],pos[at2]))
     #print ('atoms.get_positions()[at1],atoms.get_positions()[at2]={},{}'.format(atoms.get_positions()[at1],atoms.get_positions()[at2]))
-    at = Atoms(cell=atoms.get_cell()) 
-    for a in range(len(rand_pos)):    
-        at.extend(Atoms('{}'.format(elem_list[a]),positions=[(rand_pos[a][0],rand_pos[a][1],rand_pos[a][2])]))
-    for a in range(len(anion_coord)):
-        at.extend(Atoms('{}'.format(anion[0]),positions=[(anion_coord[a][0],anion_coord[a][1],anion_coord[a][2])]))
-    at.set_pbc((True,True,True)) 
+    import time
+
+    t_build = time.time()
+    # at = Atoms(cell=atoms.get_cell()) 
+    # for a in range(len(rand_pos)):    
+    #     at.extend(Atoms('{}'.format(elem_list[a]),positions=[(rand_pos[a][0],rand_pos[a][1],rand_pos[a][2])]))
+    # for a in range(len(anion_coord)):
+    #     at.extend(Atoms('{}'.format(anion[0]),positions=[(anion_coord[a][0],anion_coord[a][1],anion_coord[a][2])]))
+    # at.set_pbc((True,True,True)) 
+#     at = Atoms(
+#     symbols=elem_list,
+#     positions=rand_pos,
+#     cell=atoms.get_cell(),
+#     pbc=True
+# )
+    if len(anion_coord) == 0:
+
+     at = Atoms(
+        symbols=elem_list,
+        positions=np.array(rand_pos),
+        cell=atoms.get_cell(),
+        pbc=True
+    )
+
+    else:
+
+     anion_symbols = [anion[0]] * len(anion_coord)
+
+     at = Atoms(
+        symbols=elem_list + anion_symbols,
+        positions=np.vstack((
+            np.array(rand_pos),
+            np.array(anion_coord)
+        )),
+        cell=atoms.get_cell(),
+        pbc=True
+    )
+    t_nn = time.time()
+
+    re_i, re_j = neighbor_list('ij', at, cutoff)
+
+    print("neighbor_list =", time.time() - t_nn)
+    print("Build Atoms =", time.time() - t_build)
     #print ('at.get_positions()[at1],at.get_positions()[at2]={},{}'.format(at.get_positions()[at1],at.get_positions()[at2]))
 
-    re_i,re_j=neighbor_list('ij',at,cutoff)
+    # re_i,re_j=neighbor_list('ij',at,cutoff)
     #modify i and j to include only metals and remove anions
     re_i_mod = []
     re_j_mod = []
@@ -84,15 +130,62 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
         if ( a < len(rand_pos) and b < len(rand_pos)):
             re_i_mod.append(a)
             re_j_mod.append(b)
+#     import time
 
-    re_count_bond = func_all.bond_pair_count(pairs,re_i_mod,re_j_mod,elem_list)
+#     t1 = time.time()
+
+#     re_count_bond = func_all.bond_pair_count(
+#     pairs,
+#     re_i_mod,
+#     re_j_mod,
+#     elem_list
+# )
+
+#     print("bond_pair_count =", time.time() - t1)
+#     re_count_bond = func_all.bond_pair_count(pairs,re_i_mod,re_j_mod,elem_list)
+    import time
+
+    t1 = time.time()
+
+#     re_count_bond = func_all.bond_pair_count(
+#     pairs,
+#     re_i_mod,
+#     re_j_mod,
+#     elem_list
+# )
+    re_count_bond = func_all.bond_pair_count(
+    pairs,
+    re_i_mod,
+    re_j_mod,
+    elem_list
+)
+
+    print("bond_pair_count =", time.time() - t1)
     #print ('bond_num,re_count_bond,ideal_count={},{},{}'.format(bond_num,re_count_bond,ideal_count))
     
+
     #calculating difference between vectors
     dist_ear = np.linalg.norm(ideal_count-bond_num)
     dist_after = np.linalg.norm(ideal_count-re_count_bond)
+    
     print ('dist_ear,dist_after,count_euc,count_euc_ear={},{},{},{}'.format(dist_ear,dist_after,count_euc,count_euc_ear))
     
+    # error = ideal_count - bond_num
+
+#     print(
+#     "Step",
+#     counter,
+#     "Error",
+#     error
+# )
+#     largest = np.argmax(np.abs(error))
+
+#     print(
+#     "Largest error bond =",
+#     pairs[largest],
+#     "Error =",
+#     error[largest]
+# )
     if (dist_ear >= dist_after or count_euc > (10*count_euc_ear)): #or count_euc > (10*count_euc_ear)
         return at,re_count_bond,dist_after,rand_pos
     elif (dist_ear < dist_after):
@@ -103,10 +196,20 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
         if (counter >= len(T_profile)):
             #earlier swap is not accpeted and hence
             #positions are being changed to original.
-            for num,a in enumerate(first):
-                rand_pos[at1][num] = a
-            for num,a in enumerate(second):
-                rand_pos[at2][num] = a
+            # for num,a in enumerate(first):
+            #     rand_pos[at1][num] = a
+            # for num,a in enumerate(second):
+            #     rand_pos[at2][num] = a
+#             elem_list[at1], elem_list[at2] = (
+#     elem_list[at2],
+#     elem_list[at1]
+# )           
+            # old_ele1 = elem_list[at1]
+            # old_ele2 = elem_list[at2]
+
+            elem_list[at1] = old_ele2
+            elem_list[at2] = old_ele1
+            
             return atoms,bond_num,dist_ear,rand_pos
         else:
             temp = T_profile[counter]
@@ -123,27 +226,196 @@ def swap_ideal(centre,elements,num_each,rand_pos,excluded_ele,atoms,elem_list,cu
             else:
                 accept = False
             if (accept == True):
+               
                 return at,re_count_bond,dist_after,rand_pos
             else:
-                for num,a in enumerate(first):
-                    rand_pos[at1][num] = a
-                for num,a in enumerate(second):
-                    rand_pos[at2][num] = a
+                # for num,a in enumerate(first):
+                #     rand_pos[at1][num] = a
+                # for num,a in enumerate(second):
+                #     rand_pos[at2][num] = a
+    #             elem_list[at1], elem_list[at2] = (
+    # elem_list[at2],
+    # elem_list[at1]
+                elem_list[at1] = old_ele1
+                elem_list[at2] = old_ele2
+                
+
                 return atoms,bond_num,dist_ear,rand_pos
 
     else:
-        #for num,a in enumerate(first):
-        #    pos[at1][num] = a
-        #for num,a in enumerate(second):
-        #    pos[at2][num] = a
-        #return atoms,bond_num,dist_ear,pos
+       
+    
         return at,re_count_bond,dist_after,rand_pos
+
+def local_bond_delta(elem_list, nn_dict, pairs, at1, at2):
+    """
+    Compute how bond counts change if we swap the chemical species
+    currently sitting at atom indices at1 and at2 - using ONLY their
+    local neighbor environments (nn_dict), instead of rebuilding the
+    whole Atoms object and recomputing every bond in the supercell.
+
+    This is what makes the final-stage correction cheap: O(coordination
+    number) per trial swap instead of O(N) for the whole structure.
+
+    Returns:
+        delta : np.array, same order as `pairs`.
+                new_bond_num = bond_num + delta
+    """
+    e1 = elem_list[at1]
+    e2 = elem_list[at2]
+    delta = np.zeros(len(pairs))
+
+    if e1 == e2:
+        return delta   # nothing changes
+
+    # NOTE: the x2 here matches this codebase's convention of counting
+    # each physical bond from both directions (same convention behind
+    # your own `ideal_count[num] = 2*ideal_num` for unlike pairs).
+    # Verify with the sanity check below before trusting a long run.
+    for nb in nn_dict[at1]:
+        if nb == at2:
+            continue    # the at1-at2 bond itself doesn't change type
+        old_idx = func_all.pair_index(pairs, e1, elem_list[nb])
+        new_idx = func_all.pair_index(pairs, e2, elem_list[nb])
+        delta[old_idx] -= 2
+        delta[new_idx] += 2
+
+    for nb in nn_dict[at2]:
+        if nb == at1:
+            continue
+        old_idx = func_all.pair_index(pairs, e2, elem_list[nb])
+        new_idx = func_all.pair_index(pairs, e1, elem_list[nb])
+        delta[old_idx] -= 2
+        delta[new_idx] += 2
+
+    return delta
+
+
+def final_stage_correction(pairs, bond_num, ideal_count, elem_list, nn_dict,
+                            elements, max_trials_per_step=100000, counter=0):
+    """
+    Fast targeted correction for the last stretch of disorder generation
+    (small residual euc_dist). Uses the SIGN of the current error vector
+    to pick promising candidate atom swaps, and a cheap LOCAL bond-count
+    update (local_bond_delta) - no neighbor_list rebuild - to test them.
+
+    Sign convention (matches this codebase's ideal()):
+        error = bond_num - ideal_count
+        error > 0  -> this bond type is OVERrepresented -> must DECREASE
+        error < 0  -> this bond type is UNDERrepresented -> must INCREASE
+
+    Only accepts a candidate swap if it strictly reduces euc_dist -
+    error signs pick promising candidates, Euclidean distance decides.
+
+    Returns:
+        bond_num, elem_list (mutated), accepted_steps, counter, euc_dist
+    """
+    # Track which atom indices currently hold which species. Positions
+    # can have drifted from their original canonical ranges after many
+    # prior swaps in the general search stage, so we build this fresh
+    # from the actual current elem_list rather than trusting num_each
+    # index ranges.
+    species_positions = {}
+    position_in_list = {}
+    for idx, sp in enumerate(elem_list):
+        species_positions.setdefault(sp, []).append(idx)
+    for sp, lst in species_positions.items():
+        for pos_in_list, atom_idx in enumerate(lst):
+            position_in_list[atom_idx] = pos_in_list
+
+    def remove_atom(sp, atom_idx):
+        lst = species_positions[sp]
+        pos = position_in_list[atom_idx]
+        last_atom = lst[-1]
+        lst[pos] = last_atom
+        position_in_list[last_atom] = pos
+        lst.pop()
+        del position_in_list[atom_idx]
+
+    def add_atom(sp, atom_idx):
+        species_positions.setdefault(sp, []).append(atom_idx)
+        position_in_list[atom_idx] = len(species_positions[sp]) - 1
+
+    accepted_steps = 0
+    euc_dist = np.linalg.norm(ideal_count - bond_num)
+
+    while euc_dist > 0:
+        error = bond_num - ideal_count
+        over_idx  = [i for i, e in enumerate(error) if e > 0]  # needs to decrease
+        under_idx = [i for i, e in enumerate(error) if e < 0]  # needs to increase
+
+        if not over_idx or not under_idx:
+            # shouldn't normally happen (total bond count is conserved,
+            # so a nonzero error vector always has both signs present) -
+            # bail out to the caller's general search as a safety net.
+            break
+
+        found_improvement = False
+
+        for _trial in range(max_trials_per_step):
+            over_pair  = pairs[random.choice(over_idx)]
+            under_pair = pairs[random.choice(under_idx)]
+
+            e_over  = random.choice(over_pair.split('-'))
+            e_under = random.choice(under_pair.split('-'))
+
+            if e_over == e_under:
+                continue
+            if not species_positions.get(e_over) or not species_positions.get(e_under):
+                continue
+
+            at1 = random.choice(species_positions[e_over])
+            at2 = random.choice(species_positions[e_under])
+            if at1 == at2:
+                continue
+
+            delta = local_bond_delta(elem_list, nn_dict, pairs, at1, at2)
+            new_bond_num = bond_num + delta
+            new_euc_dist = np.linalg.norm(ideal_count - new_bond_num)
+
+            if new_euc_dist < euc_dist:
+                e1 = elem_list[at1]
+                e2 = elem_list[at2]
+                elem_list[at1], elem_list[at2] = e2, e1
+
+                remove_atom(e1, at1)
+                remove_atom(e2, at2)
+                add_atom(e1, at2)
+                add_atom(e2, at1)
+
+                bond_num = new_bond_num
+                euc_dist = new_euc_dist
+                accepted_steps += 1
+                counter += 1
+
+                total_num_bonds = np.sum(bond_num)
+                delta_op, _ = func_all.order_para_cal(
+                    pairs, bond_num, int(len(elements)),
+                    int(len(elements)*(len(elements)-1)/2), total_num_bonds
+                )
+                print(f"[final-stage] Step={counter}, euc_dist={euc_dist}, Delta={delta_op:.6f}")
+                print(" Error vector =", ideal_count - bond_num)
+                with open('euc_distance.csv', 'a') as inp:
+                    inp.write(str(euc_dist))
+                    inp.write('\n')
+
+                found_improvement = True
+                break
+
+        if not found_improvement:
+            break
+
+    return bond_num, elem_list, accepted_steps, counter, euc_dist
 
 def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,elem_list,cutoff,Tmax,Tnum,anion_coord,anion):
     '''
 
     '''
+    delta_history = []   # <-- ADDED THIS
     ideal_count = np.zeros(len(pairs))
+    FINAL_STAGE_THRESHOLD = 10
+    final_stage_done = False
+    
     for num,item in enumerate(pairs):
         if (item.split('-')[0] == item.split('-')[1]):
             ideal_count[num] = ideal_num
@@ -157,7 +429,7 @@ def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,e
         print (item)
 
     #T_profile = np.zeros(Tnum)
-    euc_dist = np.linalg.norm(ideal_num - bond_num)
+    euc_dist = np.linalg.norm(ideal_count - bond_num)
     start_euc = euc_dist
     #to track the steps spent at particular euler dist val
     euc_ear = euc_dist #intialisation
@@ -200,11 +472,109 @@ def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,e
         #if (len(excluded_ele) == 0):
         #    el = random.randint(0,len(elements)-1)
         #    excluded_ele.append(elements[el])
-        centre = elements[random.randint(0,len(elements)-1)]
-        excluded_ele = []
-        excluded_ele.append(elements[random.randint(0,len(elements)-1)])
+        # centre = elements[random.randint(0,len(elements)-1)]
+        # excluded_ele = []
+        # excluded_ele.append(elements[random.randint(0,len(elements)-1)])
+        # bad_pairs = []
+#         error = ideal_count - bond_num
+
+#         weights = [abs(err) for err in error]
+
+# # If all errors are zero, stop
+#         if sum(weights) == 0:
+
+#          break
+
+#         chosen_idx = random.choices(
+#     range(len(pairs)),
+#     weights=weights,
+#     k=1
+# )[0]
+
+#         problem_pair = pairs[chosen_idx]
+
+#         A = problem_pair.split('-')[0]
+#         B = problem_pair.split('-')[1]
+
+#         centre = A
+#         excluded_ele = [B]
+
+#         print(
+#     "Target pair =",
+#     problem_pair,
+#     "Error =",
+#     error[chosen_idx],
+#     "Weight =",
+#     weights[chosen_idx]
+# )      
+#         print(
+#     "Chosen pair:",
+#     problem_pair,
+#     "Weight:",
+#     abs(error[chosen_idx])
+# )     
+        error = bond_num - ideal_count
+
+# ---------------------------------------
+# Top-K weighted bond selection
+# ---------------------------------------
+    
+        TOP_K = 3     # Try 2 first. Later you can test 3.
+
+        abs_error = np.abs(error)
+
+# Already converged
+        if np.sum(abs_error) == 0:
+         break
+
+# Indices sorted from largest to smallest error
+        sorted_idx = np.argsort(abs_error)[::-1]
+
+# Keep only the TOP_K largest errors
+        candidate_idx = sorted_idx[:TOP_K]
+
+# Their corresponding weights
+        candidate_weights = abs_error[candidate_idx]
+
+# Random weighted choice among Top-K
+        chosen_idx = random.choices(
+        candidate_idx.tolist(),
+        weights=candidate_weights.tolist(),
+    k=1
+)[0]
+
+        problem_pair = pairs[chosen_idx]
+
+        A = problem_pair.split('-')[0]
+        B = problem_pair.split('-')[1]
+
+        centre = A
+        excluded_ele = [B]
+
+        print("----------------------------------------")
+        print("Error vector :", error)
+        print("Top candidates :")
+
+        for idx in candidate_idx:
+         print(
+        pairs[idx],
+        " Error =",
+        error[idx],
+        " Weight =",
+        abs_error[idx]
+    )
+
+        print(
+    "Chosen pair :",
+    problem_pair
+)
+        print("----------------------------------------")
+
+        
+        
         at,re_bond_num,euc_dist,pos = swap_ideal(centre,elements,num_each,rand_pos,\
                 excluded_ele,atoms,elem_list,cutoff,pairs,bond_num,ideal_count,count_euc_ear,count_euc,T_profile,counter,anion_coord,anion)
+   
         counter += 1
         #if euclidian distance is unchanged
         if (euc_dist == euc_ear):
@@ -219,58 +589,71 @@ def ideal(ideal_num,pairs,bond_num,nn_dict,num_each,elements,cn,rand_pos,atoms,e
         atoms = at
         bond_num = re_bond_num
         rand_pos = pos
+                # =========================================================
+        # FINAL-STAGE LOCAL CORRECTION
+        # =========================================================
+        if (euc_dist <= FINAL_STAGE_THRESHOLD
+                and not final_stage_done):
+
+            print("\n" + "="*60)
+            print("Entering final-stage local correction")
+            print("Initial final-stage euc_dist =", euc_dist)
+            print("="*60)
+
+            (
+                bond_num,
+                elem_list,
+                accepted_final_steps,
+                counter,
+                euc_dist
+            ) = final_stage_correction(
+                pairs,
+                bond_num,
+                ideal_count,
+                elem_list,
+                nn_dict,
+                elements,
+                counter=counter
+            )
+
+            # Update the Atoms object so that its chemical symbols
+            # match the corrected elem_list.
+            atoms = atoms.copy()
+            atoms.set_chemical_symbols(elem_list)
+
+            final_stage_done = True
+
+            print("\n" + "="*60)
+            print("Final-stage correction completed")
+            print("Accepted final-stage swaps =", accepted_final_steps)
+            print("Final euc_dist              =", euc_dist)
+            print("="*60)
+            print("Final euc_dist =", euc_dist)
+            print("Final error vector =", ideal_count - bond_num)
+            # Stop the normal simulated-annealing search.
+            break
+        
+    
+        total_num_bonds = np.sum(bond_num)
+
+        delta, _ = func_all.order_para_cal(
+        pairs,
+        bond_num,
+        int(len(elements)),
+        int(len(elements)*(len(elements)-1)/2),
+        total_num_bonds
+)
+        print(
+    f"Step={counter}, Delta={delta:.6f}"
+)
+
+
+        delta_history.append(delta)
         with open ('euc_distance.csv','a') as inp:
             inp.write(str(euc_dist))
             inp.write('\n')
     return atoms,bond_num,start_euc,counter
-        #ele_id = func_all.ele_indx(elements,centre)
-        #start = 0
-        #end = 0
-        #for a in range(len(elements)):
-        #    if (a < ele_id):
-        #        start = start + num_each[a]
-        #        end = end + num_each[a]
-        #    elif (a == ele_id):
-        #        end = end + num_each[a]
-        #    else:
-        #        pass
-        #start,end = func_all.start_end(elements,centre,num_each)
-        #print ('centre,ele_id,num_each,start,end={},{},{},{},{}'.format(centre,ele_id,num_each,start,end))
-        #centre_val = []
-        #other_val = []
-        #for a in range(start,end):
-        #    nnlist1=np.array(range(cn),dtype='int')
-        #    for b,c in enumerate(nn_dict[a]):
-        #        nnlist1[b] = c 
-        #    for d in nnlist1:
-        #        if (list_element[d] == other):
-        #            rand_swap = random.randint(0,len(excluded_ele)) #randomly choosing any of the excluded element, which will be swapped with other
-                    #finding the range for element, which will be swapped with 'other' element
-        #            start2,end2 = func_all.start_end(elements,exluded_ele[rand_swap],num_each)
-        #            other_swap = random.randint(start2,end2) #element entry which will be swapped with 'other' element or 'd'
-                    #ensuring that other_swap != a 
-        #            if ( other_swap == a):
-        #                while (other_swap == a):
-        #                    other_swap = random.randint(start2,end2)
-        #            else:
-        #                pass 
-                    
-                    #nnlist2=np.array(range(cn),dtype='int')
-                    #for m,n in enumerate(nn_dict[d]):
-                    #    nnlist2[m] = n
-                    #checking, if any ele in nnlist2 is excluded_ele
-                    #count = 0
-                    #for m in nnlist2:
-                    #    for n in excluded_ele:
-                    #        if (n == list_element[m]):
-                    #            break
-                    #        else:
-                    #            count += 1
-                    #print ('count={}'.format(count))
-                    #if ( count == ((cn * len(excluded_ele)) - 1)):         
-                    #    centre_val.append(a)
-                    #    other_val.append(d)
-        #print ('central_val,other_val={},{}'.format(centre_val,other_val))
+       
             
 def roulette(atom_left,elements):
     '''
@@ -302,7 +685,6 @@ def roulette(atom_left,elements):
             pass
     #print (frac,add_frac,val_range,rand_val,at)
     return at
-
 def check_bond_count(list_element,i,j,pairs):
     temp_ele=set(list_element)
     #since set object is not subscriptable, we need to generate a list
@@ -448,6 +830,15 @@ def random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_
     if (check_int != 0):
         print ('Make sure that inp.cfg contains no. of atoms such that number of bonds should be divisible with {}'.format(2*num_unlike+num_like))
         exit(1)
+    test_at1, test_at2 = 0, 1   # any two atom indices of different species will do
+    if elem_list[test_at1] != elem_list[test_at2]:
+     delta_predicted = local_bond_delta(elem_list, nn_dict, pairs, test_at1, test_at2)
+     before = count_bond.copy()
+     elem_list[test_at1], elem_list[test_at2] = elem_list[test_at2], elem_list[test_at1]
+     after = func_all.bond_pair_count(pairs, i, j, elem_list)   # your real recount function
+     elem_list[test_at1], elem_list[test_at2] = elem_list[test_at2], elem_list[test_at1]  # undo
+     print("predicted delta:", delta_predicted)
+     print("actual delta   :", np.array(after) - np.array(before))
     count_bond = func_all.bond_pair_count(pairs,i,j,elem_list)
     nn_dict=func_all.nn_dict_det(i,j)
     atoms_final,count_bond_final,euc_start,counter_reach= ideal(ideal_num,pairs,count_bond,nn_dict,num_each,elements,cn,rand_pos,at,elem_list,cutoff,Tmax,Tnum,anion_coord,anion)
@@ -460,9 +851,19 @@ def random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_
     atom_left = np.zeros(len(num_each)) #no meaning, it is here simply to avoid error
     delta,num_bond_disorder=func_all.order_para_cal(pairs,count_bond_final,\
             num_like,num_unlike,len(i))
-    if(delta == 0.0):
+    if(delta == 0):
         write('{}_random.xyz'.format(delta),atoms_final)
         write('{}_random.vasp'.format(delta),atoms_final)
+  
+
+    # write("Disordered 23K.data", atoms_final)
+    write(
+    "MoNbTaWV.data",
+    atoms_final,
+    format="lammps-data",
+    specorder=["Mo", "Nb", "Ta", "W","V"],
+    atom_style="atomic"
+)
 
     '''
     #option-2: engineered shuffling
@@ -742,5 +1143,30 @@ def random_struc_gen(proxy_ele,elements,num_each,at,cutoff,pairs,num_unlike,num_
     #print ('returning val = {},{},{},{},{}'.format(check_count_bond,atom_left,delta,ideal_num,num_each))
     #ideal(ideal_num,pairs,check_count_bond,nn_dict,num_each,elements,cn,check_pos,check_at,list_element,cutoff)
     '''
-    return count_bond_final,atom_left,delta,ideal_num
+   
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+
+    pos = atoms_final.get_positions()
+    symbols = atoms_final.get_chemical_symbols()
+
+    fig = plt.figure(figsize=(8,8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    for sym in set(symbols):
+
+        mask = np.array(symbols) == sym
+
+        ax.scatter(
+            pos[mask,0],
+            pos[mask,1],
+            pos[mask,2],
+            label=sym,
+            s=40
+        )
+
+    ax.legend()
+    plt.show()
+    
+    return atoms_final,count_bond_final,atom_left,delta,ideal_num
     

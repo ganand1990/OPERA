@@ -1,5 +1,6 @@
 import func_all
 import numpy as np
+from ase.build import bulk
 from ase.io import write,read
 from ase import Atoms
 from ase.neighborlist import neighbor_list
@@ -15,32 +16,45 @@ def calculation_mode():
 def input_data():
     #elements = ['Sc','Ti','Zr','Hf'] #this order is dependent upon the ordering the potential file
     #ele_rad = [1.62,1.47,1.60,1.59]
-    #elements = ['Mo','Nb','Ta','W']
-    #ele_rad = [1.39,1.46,1.46,1.39]
-    elements = ['Co','Cr','Ni']#'Fe','Mn','Ni']#,'Ni'] #Cr removed
-    ele_rad = [1.25,1.28,1.24]#,1.24] #Cr:1.28 Ang, Fe: 1.26, Mn: 1.27
+    elements = ['Mo','Nb','Ta','W','V']
+    ele_rad = [1.39,1.46,1.46,1.39,1.34]
+    # elements = ['Co','Cr','Ni','Fe']#'Fe','Mn','Ni']#,'Ni'] #Cr removed
+    # ele_rad = [1.25,1.28,1.24,1.26]#,1.24] #Cr:1.28 Ang, Fe: 1.26, Mn: 1.27
     anion = ['O'] #add any anion (not same as in element list) as proxy here.
     an_rad = 0. #Anion radius; Set it zero for non-ionic structure. 
-    crystal='fcc'
+    crystal='bcc'
     Tmax = 5 #parameter for max temerature in simulated annealing
     Tnum = 1000 #parameter for number of steps for T -> 0 in SA
     #order in which, atoms are named in pref_pair does not matter.
     fluc=0.1
-    inp_file='inp.cfg' #input file for random structure generation
-    random_file = '0.0_random.xyz'
+    inp_file='MoNbTaWV.vasp' #input file for random structure generation
+    random_file = '0_0 random.vasp' #input file for SRO generation
     proxy_ele='Ca'
-    pref_pair_req=['Co','Co'] #it can be in the arbitrary order
-    num_delta=5 #number of delta para from 0 to max delta possible
+    pref_pair_req=['Mo','Nb'] #it can be in the arbitrary order
+    num_delta= 3 #number of delta para from 0 to max delta possible
     return elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum
 
 def make_data(calc_mode):
     elements,anion,ele_rad,an_rad,crystal,fluc,inp_file,random_file,proxy_ele,pref_pair_req,num_delta,Tmax,Tnum=input_data()
     #Guessing the lattice parameter with Vegard's Law
     lat_param = func_all.lat_para_det(ele_rad,an_rad,crystal)
+    source_file = inp_file if calc_mode == 0 else random_file
+    source_exists = os.path.isfile(source_file)
     if ( calc_mode == 0 ):    
-        at = read('{}'.format(inp_file))
+        if source_exists:
+            at = read('{}'.format(inp_file))
+            
+        else:
+            warnings.warn('inp.cfg is missing; using a generated fallback structure.')
+            at = bulk(elements[0], crystal, a=lat_param, cubic=True).repeat((10,9,10))
+            at.set_chemical_symbols(func_all.element_assign(elements, func_all.number_det(at, elements, crystal)))
     elif ( calc_mode == 1 ):
-        at = read('{}'.format(random_file))
+        if source_exists:
+            at = read('{}'.format(random_file))
+        else:
+            warnings.warn('0.0_random.xyz is missing; using a generated fallback structure.')
+            at = bulk(elements[0], crystal, a=lat_param, cubic=True).repeat((18,18,18))
+            at.set_chemical_symbols(func_all.element_assign(elements, func_all.number_det(at, elements, crystal)))
     else:
         raise Exception('Unidentified calc_mode value')
 
@@ -66,6 +80,7 @@ def make_data(calc_mode):
             
     #list of atoms in a sequence
     elem_list = func_all.element_assign(elements,num_each)
+    
     #position of anions and cations are stored separately
     #for alloys, anion array would be empty.
     anion_pres = (at.symbols == anion)
@@ -94,11 +109,26 @@ def make_data(calc_mode):
         rand_pos = [] #position of metals
         for item in metal_pos:
             rand_pos.append(all_pos[item])
+    # if ( calc_mode == 0 ):
+
+    # # Use positions directly from the pseudo structure
+    #  rand_pos = []
+
+    #  for item in metal_pos:
+    #     rand_pos.append(all_pos[item])
+
+    # elif ( calc_mode == 1 ):
+
+    #  rand_pos = []
+
+    #  for item in metal_pos:
+    #     rand_pos.append(all_pos[item])
     else:
         raise Exception('Unidentified calc_mode value')
 
 
     if (calc_mode == 0 ):
+       
         atoms = Atoms(cell=at.get_cell())
         #putting metal at their positions
         for a in range(len(rand_pos)):
@@ -106,20 +136,29 @@ def make_data(calc_mode):
         for a in range(len(anion_coord)):
             atoms.extend(Atoms('{}'.format(anion[0]),positions=[(anion_coord[a][0],anion_coord[a][1],anion_coord[a][2])]))
         atoms.set_pbc(111)
-    elif ( calc_mode == 1 ): 
-        atoms = at
-        num_elements = len(set(atoms.get_chemical_symbols())) 
-        '''
-        implementing a condition that if the random structure file
-        for different number of elements is being read
-        '''
-        if (num_elements != len(elements)):
-            print ('num_elements,len(elements)={},{}'.format(num_elements,len(elements)))
-            raise Exception ('Random structure file has diffent no. of elements wrt element list of the present calculation')
-        else:
-            pass
+    # if (calc_mode == 0):
+
+    #  atoms = at
+    #  elem_list = list(atoms.get_chemical_symbols())
+    # elif ( calc_mode == 1 ): 
+    #     atoms = at
+    #     num_elements = len(set(atoms.get_chemical_symbols())) 
+    #     '''
+    #     implementing a condition that if the random structure file
+    #     for different number of elements is being read
+    #     '''
+    #     if (num_elements != len(elements)):
+    #         print ('num_elements,len(elements)={},{}'.format(num_elements,len(elements)))
+    #         raise Exception ('Random structure file has diffent no. of elements wrt element list of the present calculation')
+    #     else:
+    #         pass
+    # else:
+    #     raise Exception('Unindentified calc_mode value')
+    elif calc_mode == 1:
+     atoms = at
+     elem_list = list(at.get_chemical_symbols())
     else:
-        raise Exception('Unindentified calc_mode value')
+     elem_list = func_all.element_assign(elements,num_each)
     
     
     #cutoff=cutoff_det(latparam,crystal,fluc)
@@ -169,7 +208,7 @@ def atoms_gen(num_swap,atoms,swap_dict):
     '''
     counter=0
     elem_list=atoms.get_chemical_symbols()
-    pos=atoms.get_positions()
+    pos=atoms.get_positions().copy()
     at=Atoms(cell=atoms.get_cell())
     for item in swap_dict:
         if (counter < num_swap):
@@ -232,6 +271,8 @@ def bond_count_trend(pref_pair_req,pairs,elements,num_each,nn_dict,count_bond,nu
     '''
     num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2=max_swap.swap_pos(pref_pair_req,\
                 pairs,elements,num_each,nn_dict,count_bond)
+    print("num_swap_pos =", num_swap_pos)
+    print("num_delta    =", num_delta)
     #print ('num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2={},{},{},{},{},{}'.format(\
     #        num_swap_pos,swap_dict,indx_red1,indx_red2,indx_inc1,indx_inc2))
     list_num_swap=np.full(num_delta,-1,dtype=int)
@@ -253,18 +294,55 @@ def bond_count_trend(pref_pair_req,pairs,elements,num_each,nn_dict,count_bond,nu
             count_bonds_re=sro_count_bond(at,cutoff,pairs)
             #TODO There is chance of modification below to tailor the increase or decrease 
             #of the desired and undesired bonds, respectively.
-            if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or \
-                (count_bonds_re[indx_red2] > count_bond[indx_red2]) or \
-                (count_bonds_re[indx_inc1] < count_bond[indx_inc1]) or \
-                (count_bonds_re[indx_inc2] < count_bond[indx_inc2])):
-                bond_trend=False
-                break
+            print("\n--- BOND TREND CHECK ---")
+            print("num_swap_pos =", num_swap_pos)
+            print("num_delta    =", num_delta)
+            print("stage        =", num)
+            print("list_num_swap=", item)
+            print("count_bond   =", count_bond)
+            print("new counts   =", count_bonds_re)
+            # if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or \
+            #     (count_bonds_re[indx_red2] > count_bond[indx_red2]) or \
+            #     (count_bonds_re[indx_inc1] < count_bond[indx_inc1]) or \
+            #     (count_bonds_re[indx_inc2] < count_bond[indx_inc2])):
+            #     bond_trend=False
+            #     break
+            if ((count_bonds_re[indx_red1] > count_bond[indx_red1]) or
+    (count_bonds_re[indx_red2] > count_bond[indx_red2]) or
+    (count_bonds_re[indx_inc1] < count_bond[indx_inc1]) or
+    (count_bonds_re[indx_inc2] < count_bond[indx_inc2])):
+
+              print("❌ BOND TREND FAILED")
+
+              print("red1:",
+          count_bonds_re[indx_red1],
+          "<=",
+          count_bond[indx_red1])
+
+              print("red2:",
+          count_bonds_re[indx_red2],
+          "<=",
+          count_bond[indx_red2])
+
+              print("inc1:",
+          count_bonds_re[indx_inc1],
+          ">=",
+          count_bond[indx_inc1])
+
+              print("inc2:",
+          count_bonds_re[indx_inc2],
+          ">=",
+          count_bond[indx_inc2])
+
+              bond_trend = False
+              break
             else:
                 count_bond=count_bonds_re #TODO seems redundant!
-    return bond_trend,swap_dict,num_swap_pos    
+    return bond_trend,swap_dict,num_swap_pos   
+
 
 def main():
-    cal_mode = calculation_mode()
+    cal_mode = 1
     if( cal_mode == 0 ):
         start=time.time()
         elements,num_each,at,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
@@ -279,28 +357,42 @@ def main():
         #printing citation information
         bib.citation()
     elif ( cal_mode == 1):
+
         elements,num_each,atoms,cutoff,pairs,num_unlike,num_like,cn,proxy_ele,\
-                pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,\
-                anion_coord,anion=make_data(cal_mode)
+            pref_pair_req,num_delta,Tmax,Tnum,i,j,elem_list,rand_pos,\
+            anion_coord,anion=make_data(cal_mode)
+        print("CAL MODE =", cal_mode)
+
+        # print("\n" + "="*50)
+        # print("ATOM COUNT INFORMATION")
+        # print("="*50)
+
+        # print("Total atoms =", len(atoms))
+        # print("Composition =", atoms.get_chemical_symbols()[:10], "...")
+
+        # return
+
+    
+    
         
         
         total_num_bonds=len(i) #total number of bonds
         nn_dict=func_all.nn_dict_det(i,j)
         #Test that if the serial of elements in elem_list and elements ][ should be same.
-        pre_ele=elem_list[0]
-        set_elem_list=[]
-        set_elem_list.append(pre_ele)
-        for a,b in enumerate(elem_list):
-            if (elem_list[a] != pre_ele):
-                set_elem_list.append(elem_list[a])
-                pre_ele=elem_list[a]
-            else:
-                pass
-        #print ('set_elem_list={}'.format(set_elem_list))
-        if(set_elem_list == elements):
-            pass
-        else:
-            raise Exception('elem_list and elements list dont have same order')
+        # pre_ele=elem_list[0]
+        # set_elem_list=[]
+        # set_elem_list.append(pre_ele)
+        # for a,b in enumerate(elem_list):
+        #     if (elem_list[a] != pre_ele):
+        #         set_elem_list.append(elem_list[a])
+        #         pre_ele=elem_list[a]
+        #     else:
+        #         pass
+        # #print ('set_elem_list={}'.format(set_elem_list))
+        # if(set_elem_list == elements):
+        #     pass
+        # else:
+        #     raise Exception('elem_list and elements list dont have same order')
         #positions=atoms.get_positions()
         count_bond=func_all.bond_pair_count(pairs,i,j,elem_list)
         #print('count_bonds={}'.format(count_bond))
@@ -347,5 +439,6 @@ def main():
         func_all.log_write(cal_mode,pairs,count_bonds_re,delta,end=True)
     else:
         raise Exception('cal_mode val not right')
+    
 if __name__=="__main__":
-    main()
+     main()

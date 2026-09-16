@@ -7,6 +7,7 @@ from ase.lattice.cubic import FaceCenteredCubic
 from ase.neighborlist import neighbor_list
 import time
 from datetime import date, time, datetime
+from collections import Counter
 
 def number_det(atom,elements,crystal):
     '''
@@ -133,14 +134,35 @@ def bond_pair_count(pairs,i,j,elem_list):
     counter_val2=np.zeros(len(pairs))
     counter_val3=np.zeros(len(pairs))
     #generating the bond_pair list
-    bond_pair=[]
-    #print ('{},{},{}'.format(len(i),len(j),len(elem_list))) #TODO remove
+#     bond_pair=[]
+#     #print ('{},{},{}'.format(len(i),len(j),len(elem_list))) #TODO remove
+#     for a in range(len(i)):
+#         #print ('{},{}'.format(i[a],j[a])) #TODO remove this
+#         # bond_pair.append('{}-{}'.format(elem_list[i[a]],elem_list[j[a]]))
+#         bond_pair.append(
+#     (
+#         elem_list[i[a]],
+#         elem_list[j[a]]
+#     )
+# )
+    bond_pair = Counter()
+
     for a in range(len(i)):
-        #print ('{},{}'.format(i[a],j[a])) #TODO remove this
-        bond_pair.append('{}-{}'.format(elem_list[i[a]],elem_list[j[a]]))
+
+       bond = (
+        elem_list[i[a]],
+        elem_list[j[a]]
+    )
+
+       bond_pair[bond] += 1
     for b,c in enumerate(pairs):
-        counter_val1[b]=bond_pair.count('{}-{}'.format(c.split('-')[0],c.split('-')[1]))
-        counter_val2[b]=bond_pair.count('{}-{}'.format(c.split('-')[1],c.split('-')[0]))
+        # counter_val1[b]=bond_pair.count('{}-{}'.format(c.split('-')[0],c.split('-')[1]))
+        # counter_val2[b]=bond_pair.count('{}-{}'.format(c.split('-')[1],c.split('-')[0]))
+        ele1 = c.split('-')[0]
+        ele2 = c.split('-')[1]
+
+        counter_val1[b] = bond_pair[(ele1, ele2)]
+        counter_val2[b] = bond_pair[(ele2, ele1)]
         if (c.split('-')[0] != c.split('-')[1]): #unlike bond
             counter_val3[b]=counter_val1[b]+counter_val2[b]
         else:
@@ -229,6 +251,7 @@ def nn_dict_det(i,j):
     '''
     nn_dict={}
     item_ear=-1
+    nnlist=[]
     for num,item in enumerate(i):
         if(item == item_ear):
             nnlist.append(j[num])
@@ -351,4 +374,4 @@ def log_write(cal_mode,pairs,count_bonds,delta,end):
                 out.write(str('{:.4f}'.format(delta)))
                 out.write('\n')
             else:
-                raise Exception("the value of bollean parameter end not provided")
+                raise Exception("the value of bollean parameter end not provided")      
